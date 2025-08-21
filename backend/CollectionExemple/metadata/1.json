@@ -1,0 +1,11 @@
+{
+  "name": "{{NAME}}",
+  "description": "{{DESCRIPTION}}",
+  "image": "{{IMAGE_URL_OR_IPFS_CID}}",
+  "animation_url": "{{ANIMATION_URL_OR_IPFS_CID}}",
+  "attributes": [
+    { "trait_type": "{{TRAIT_TYPE_1}}", "value": "{{TRAIT_VALUE_1}}" },
+    { "trait_type": "{{TRAIT_TYPE_2}}", "value": "{{TRAIT_VALUE_2}}" },
+    { "trait_type": "{{TRAIT_TYPE_3}}", "value": "{{TRAIT_VALUE_3}}" }
+  ]
+}

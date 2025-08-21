@@ -1,0 +1,6 @@
+{
+    "solc_remaps": ["@openzeppelin=./node_modules/@openzeppelin"],
+    "filter_paths": ["node_modules"],
+    "compilation_skip_size": true,
+    "exclude_dependencies": true
+}
