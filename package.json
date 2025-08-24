@@ -4,8 +4,11 @@
   "description": "NFT Upgradeable EVM",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "eslint \"scripts/**/*.ts\" \"test/**/*.ts\" \"utils/**/*.ts\" \"ignition/**/*.ts\"",
-    "lint:fix": "eslint --fix \"scripts/**/*.ts\" \"test/**/*.ts\" \"utils/**/*.ts\" \"ignition/**/*.ts\""
+    "lint": "eslint \"scripts/**/*.ts\" \"test/**/*.ts\" \"ignition/**/*.ts\"",
+    "lint:fix": "eslint --fix \"scripts/**/*.ts\" \"test/**/*.ts\" \"ignition/**/*.ts\"",
+    "test": "npx hardhat test",
+    "test:coverage": "npx hardhat coverage",
+    "test:gas": "REPORT_GAS=true npx hardhat test"
   },
   "dependencies": {
     "@nomicfoundation/ethereumjs-util": "^9.0.4",
@@ -22,6 +25,9 @@
     "@nomicfoundation/hardhat-verify": "^2.0.14",
     "@nomiclabs/hardhat-solhint": "^4.0.1",
     "@openzeppelin/hardhat-upgrades": "^3.9.0",
+    "@types/chai": "^5.2.2",
+    "@types/mocha": "^10.0.10",
+    "chai": "^4.5.0",
     "dotenv": "^16.5.0",
     "eslint": "^9.10.0",
     "eslint-config-sheriff": "^21.2.0",
@@ -30,6 +36,7 @@
     "hardhat": "^2.23.0",
     "hardhat-tracer": "^3.2.0",
     "jq-cli-wrapper": "^1.6.1",
+    "mocha": "^11.7.1",
     "prettier": "3.5.3",
     "prettier-plugin-solidity": "^2.0.0",
     "tsx": "^4.19.4"
