@@ -1,6 +1,6 @@
 # ===== Default & Phony =====
 .DEFAULT_GOAL := help
-.PHONY: help uploadAssetsAndUpdateMetadata deployWithIgnition mint batchMint audit verbose
+.PHONY: help uploadAssetsAndUpdateMetadata deployWithIgnition mint batchMint audit verbose test
 
 # ===== Binaries =====
 HARDHAT := npx hardhat
@@ -74,6 +74,8 @@ help:
 	@echo "Audit:"
 	@echo "  make audit contract=<ContractName> only=<Slither|Solhint|Mythril>            			      => Run Slither/Solhint/Mythril and combine reports"
 	@echo ""
+	@echo "Testing:"
+	@echo "  make test network=<Network>                                                      			  => Run tests"
 
 # ===== Tasks =====
 uploadAssetsAndUpdateMetadata:
@@ -161,5 +163,9 @@ audit:
 		echo "$$BYTECODE" | myth analyze --codefile /dev/stdin >> "$$audit_file" 2>&1 || true; \
 	fi; \
 	echo "\n✅ Complete audit report saved to: $$audit_file"
+
+test:
+	@echo "Running tests..."
+	@$(HARDHAT) test
 
 verbose: ;
