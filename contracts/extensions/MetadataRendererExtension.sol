@@ -5,21 +5,26 @@ import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 
 import { IMetadataRendererExtension } from "../interfaces/IMetadataRendererExtension.sol";
 
-import { Router } from "../router/Router.sol";
+import { IRouterForMetadataRendererExtension } from "../interfaces/IRouterForMetadataRendererExtension.sol";
 
+import { AddressChecksLib } from "../libraries/AddressChecksLib.sol";
 import { JSONEscapeLib } from "../libraries/JSONEscapeLib.sol";
 
 import { CoreMetadata } from "../types/CoreMetadata.sol";
 import { MediaMetadata } from "../types/MediaMetadata.sol";
 
 contract MetadataRendererExtension is IMetadataRendererExtension {
-    Router private immutable router;
+    using AddressChecksLib for address;
+
+    IRouterForMetadataRendererExtension private immutable router;
 
     constructor(address routerAddress) {
-        router = Router(routerAddress);
+        router = IRouterForMetadataRendererExtension(
+            routerAddress.ensureNonZeroContract("routerAddress")
+        );
     }
 
-    function renderTokenURI(uint256 tokenId) external view returns (string memory) {
+    function renderTokenURI(uint256 tokenId) external view override returns (string memory) {
         CoreMetadata.Metadata memory metadata = router.handleGetCoreMetadata(tokenId);
         MediaMetadata.Metadata memory media = router.handleGetMediaMetadata(tokenId);
 

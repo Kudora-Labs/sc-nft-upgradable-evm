@@ -3,7 +3,9 @@ pragma solidity ^0.8.28;
 
 import { ISingleMintExtension } from "../interfaces/ISingleMintExtension.sol";
 
-import { Router } from "../router/Router.sol";
+import { IRouterForMintExtension } from "../interfaces/IRouterForMintExtension.sol";
+
+import { AddressChecksLib } from "../libraries/AddressChecksLib.sol";
 
 import { CoreMetadata } from "../types/CoreMetadata.sol";
 import { MediaMetadata } from "../types/MediaMetadata.sol";
@@ -12,12 +14,14 @@ error SingleMintExtension_NotRouter();
 error SingleMintExtension_TokenIdZero();
 
 contract SingleMintExtension is ISingleMintExtension {
+    using AddressChecksLib for address;
+
+    IRouterForMintExtension private immutable router;
+
     event SingleMintEvent(address indexed to, uint256 indexed tokenId);
 
-    Router private immutable router;
-
     constructor(address routerAddress) {
-        router = Router(routerAddress);
+        router = IRouterForMintExtension(routerAddress.ensureNonZeroContract("router"));
     }
 
     modifier onlyRouter() {

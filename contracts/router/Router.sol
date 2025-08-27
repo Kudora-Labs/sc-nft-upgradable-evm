@@ -2,17 +2,18 @@
 pragma solidity ^0.8.28;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {
-    OwnableUpgradeable
-} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {
-    UUPSUpgradeable
-} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import { IRouterForMetadataRendererExtension } from "../interfaces/IRouterForMetadataRendererExtension.sol";
+import { IRouterForMintExtension } from "../interfaces/IRouterForMintExtension.sol";
+import { IRouterForNFTCore } from "../interfaces/IRouterForNFTCore.sol";
 
 import { IBatchMintExtension } from "../interfaces/IBatchMintExtension.sol";
 import { IMetadataRendererExtension } from "../interfaces/IMetadataRendererExtension.sol";
 import { ISingleMintExtension } from "../interfaces/ISingleMintExtension.sol";
 
+import { AddressChecksLib } from "../libraries/AddressChecksLib.sol";
 import { CoreMetadataLib } from "../libraries/CoreMetadataLib.sol";
 import { MediaMetadataLib } from "../libraries/MediaMetadataLib.sol";
 
@@ -24,22 +25,30 @@ import { MediaMetadata } from "../types/MediaMetadata.sol";
 error Router_CoreMetadataAlreadySet(uint256 tokenId);
 error Router_MediaMetadataAlreadySet(uint256 tokenId);
 error Router_NotAuthorizedExtension(address caller);
-error Router_ZeroAddress(string field);
 
-contract Router is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract Router is
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    IRouterForMetadataRendererExtension,
+    IRouterForMintExtension,
+    IRouterForNFTCore
+{
+    using AddressChecksLib for address;
+    using CoreMetadataLib for uint256;
+    using MediaMetadataLib for uint256;
+
+    address private nftCore;
+
+    IMetadataRendererExtension public metadataRendererExtension;
+    ISingleMintExtension public singleMintExtension;
+    IBatchMintExtension public batchMintExtension;
+
     event BatchMintExtensionUpdated(address indexed newExtension);
     event CoreMetadataStorageUpdated(address indexed newStorage);
     event MediaMetadataStorageUpdated(address indexed newStorage);
     event MetadataRendererUpdated(address indexed newRenderer);
     event SingleMintExtensionUpdated(address indexed newExtension);
-
-    address private nftCore;
-    IMetadataRendererExtension public metadataRendererExtension;
-    ISingleMintExtension public singleMintExtension;
-    IBatchMintExtension public batchMintExtension;
-
-    using CoreMetadataLib for uint256;
-    using MediaMetadataLib for uint256;
 
     function initialize(address initialOwner) external initializer {
         __Ownable_init(initialOwner);
@@ -86,7 +95,9 @@ contract Router is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     // MetadataRendererExtension
-    function handleRenderTokenURI(uint256 tokenId) external view returns (string memory uri) {
+    function handleRenderTokenURI(
+        uint256 tokenId
+    ) external view override(IRouterForNFTCore) returns (string memory uri) {
         return metadataRendererExtension.renderTokenURI(tokenId);
     }
 
@@ -104,14 +115,19 @@ contract Router is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // CoreMetadataLib
     function handleGetCoreMetadata(
         uint256 tokenId
-    ) external view returns (CoreMetadata.Metadata memory) {
+    )
+        external
+        view
+        override(IRouterForMetadataRendererExtension)
+        returns (CoreMetadata.Metadata memory)
+    {
         return CoreMetadataLib.get(tokenId);
     }
 
     function handleSetCoreMetadata(
         uint256 tokenId,
         CoreMetadata.Metadata memory coreMetadata
-    ) external onlyActiveExtension {
+    ) external override(IRouterForMintExtension) onlyActiveExtension {
         CoreMetadata.Metadata memory existing = CoreMetadataLib.get(tokenId);
 
         if (bytes(existing.tokenName).length > 0) {
@@ -124,14 +140,19 @@ contract Router is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // MediaMetadataLib
     function handleGetMediaMetadata(
         uint256 tokenId
-    ) external view returns (MediaMetadata.Metadata memory) {
+    )
+        external
+        view
+        override(IRouterForMetadataRendererExtension)
+        returns (MediaMetadata.Metadata memory)
+    {
         return MediaMetadataLib.get(tokenId);
     }
 
     function handleSetMediaMetadata(
         uint256 tokenId,
         MediaMetadata.Metadata memory media
-    ) external onlyActiveExtension {
+    ) external override(IRouterForMintExtension) onlyActiveExtension {
         MediaMetadata.Metadata memory existing = MediaMetadataLib.get(tokenId);
 
         if (bytes(existing.image).length > 0) {
@@ -147,32 +168,36 @@ contract Router is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         nft.mintToken(to, tokenId);
     }
 
-    function handleMintExternal(address to, uint256 tokenId) external onlyActiveExtension {
+    function handleMintExternal(
+        address to,
+        uint256 tokenId
+    ) external override(IRouterForMintExtension) onlyActiveExtension {
         handleMint(to, tokenId);
     }
 
     // === SETTERS ADMIN ===
     function setBatchMintExtension(address newBatchMintExtension) external onlyOwner {
-        if (newBatchMintExtension == address(0)) revert Router_ZeroAddress("newBatchMintExtension");
-        batchMintExtension = IBatchMintExtension(newBatchMintExtension);
-        emit BatchMintExtensionUpdated(newBatchMintExtension);
+        batchMintExtension = IBatchMintExtension(
+            newBatchMintExtension.ensureNonZeroContract("newBatchMintExtension")
+        );
+        emit BatchMintExtensionUpdated(address(batchMintExtension));
     }
 
     function setMetadataRendererExtension(address newRendererExtension) external onlyOwner {
-        if (newRendererExtension == address(0)) revert Router_ZeroAddress("newRendererExtension");
-        metadataRendererExtension = IMetadataRendererExtension(newRendererExtension);
-        emit MetadataRendererUpdated(newRendererExtension);
+        metadataRendererExtension = IMetadataRendererExtension(
+            newRendererExtension.ensureNonZeroContract("newRendererExtension")
+        );
+        emit MetadataRendererUpdated(address(metadataRendererExtension));
     }
 
     function setNFTCore(address newNFTCore) external onlyOwner {
-        if (newNFTCore == address(0)) revert Router_ZeroAddress("newNFTCore");
-        nftCore = newNFTCore;
+        nftCore = newNFTCore.ensureNonZeroContract("newNFTCore");
     }
 
     function setSingleMintExtension(address newSingleMintExtension) external onlyOwner {
-        if (newSingleMintExtension == address(0))
-            revert Router_ZeroAddress("newSingleMintExtension");
-        singleMintExtension = ISingleMintExtension(newSingleMintExtension);
-        emit SingleMintExtensionUpdated(newSingleMintExtension);
+        singleMintExtension = ISingleMintExtension(
+            newSingleMintExtension.ensureNonZeroContract("newSingleMintExtension")
+        );
+        emit SingleMintExtensionUpdated(address(singleMintExtension));
     }
 }

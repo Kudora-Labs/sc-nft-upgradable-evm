@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { Router } from "../router/Router.sol";
+import { IBatchMintExtension } from "../interfaces/IBatchMintExtension.sol";
+
+import { IRouterForMintExtension } from "../interfaces/IRouterForMintExtension.sol";
+
+import { AddressChecksLib } from "../libraries/AddressChecksLib.sol";
 
 import { CoreMetadata } from "../types/CoreMetadata.sol";
 import { MediaMetadata } from "../types/MediaMetadata.sol";
@@ -11,11 +15,13 @@ error BatchMintExtension_MismatchedMetadataLength();
 error BatchMintExtension_NotRouter();
 error BatchMintExtension_TokenIdZero();
 
-contract BatchMintExtension {
-    Router private immutable router;
+contract BatchMintExtension is IBatchMintExtension {
+    using AddressChecksLib for address;
+
+    IRouterForMintExtension private immutable router;
 
     constructor(address routerAddress) {
-        router = Router(routerAddress);
+        router = IRouterForMintExtension(routerAddress.ensureNonZeroContract("routerAddress"));
     }
 
     modifier onlyRouter() {
@@ -28,7 +34,7 @@ contract BatchMintExtension {
         uint256[] memory tokenIds,
         CoreMetadata.Metadata[] memory coreMetadatas,
         MediaMetadata.Metadata[] memory mediaMetadatas
-    ) external onlyRouter {
+    ) external override onlyRouter {
         uint256 length = tokenIds.length;
 
         if (length == 0) revert BatchMintExtension_InvalidArrayLength();
